@@ -25,14 +25,19 @@ pub struct Menu {
     num_pages: usize,
     page_start: usize,
     page_end: usize,
+    max_width: usize,
 }
 
 impl Menu {
     pub fn new(items: Vec<MenuItem>, exit_on_action: bool) -> Self {
-        let mut items_per_page: i32 = Term::stdout().size().0 as i32 - 6;
-        if items_per_page < 1 { items_per_page = 1 }
-        let items_per_page = items_per_page as usize;
+        let items_per_page: usize = (Term::stdout().size().0 - 6) as usize;
+        let items_per_page = clamp(items_per_page, 1, items.len());
         let num_pages = ((items.len() - 1) / items_per_page) + 1;
+
+        let max_width = (&items).iter().fold(0, |max, item| {
+            let label_len = item.label.len();
+            if label_len > max { label_len } else { max }
+        });
 
         let mut menu = Self {
             title: None,
@@ -45,6 +50,7 @@ impl Menu {
             num_pages,
             page_start: 0,
             page_end: 0,
+            max_width,
         };
         menu.set_page(0);
         menu
@@ -128,27 +134,34 @@ impl Menu {
     fn draw(&self, stdout: &Term) {
         stdout.clear_screen().unwrap();
 
+        let menu_width = self.max_width + 2;
+
+        let indent: usize = (stdout.size().1 / 2) as usize - ((menu_width + 4) / 2);
+        let indent_str = pad_left("".to_string(), indent);
+
+        let vertical_pad: usize = (stdout.size().0 / 2) as usize  - ((self.items_per_page + 5) / 2);
+        stdout.write_str(&format!("{:\n<width$}", "", width=vertical_pad)).unwrap();
+
+        stdout.write_line(&format!("{}{}", indent_str, gray_bg("", menu_width))).unwrap();
+
         if let Some(title) = &self.title {
-            let controls_style = Style::new().dim();
-            stdout.write_line(&format!("{}", controls_style.apply_to("  ↓,↑,←,→: select |  enter: run action |  q: quit\n"))).unwrap();
-            let title_style = Style::new().bold();
-            stdout.write_line(&format!("  {}", title_style.apply_to(title))).unwrap();
+            stdout.write_line(&format!("{}{}", indent_str, gray_bg(title, menu_width))).unwrap();
         } 
 
         for (i, option) in self.items[self.page_start..=self.page_end].iter().enumerate() {
-            if self.page_start + i == self.selected_item {
-                let style = Style::new().bold();
-                stdout.write_line(&format!("> {}", style.apply_to(&option.label))).unwrap();
+            let selected_item_str = if self.page_start + i == self.selected_item {
+                format!("> {}", option.label)
             } else {
-                stdout.write_line(&format!("  {}", option.label)).unwrap();
-            }
+                format!("  {}", option.label)
+            };
+            stdout.write_line(&format!("{}{}", indent_str, gray_bg(&selected_item_str, menu_width))).unwrap();
         }
-        stdout.write_line(&format!("Page {} of {}", self.selected_page + 1, self.num_pages)).unwrap();
+        stdout.write_line(&format!("{}{}", indent_str, gray_bg(&format!("Page {} of {}", self.selected_page + 1, self.num_pages), menu_width))).unwrap();
 
         if let Some(message) = &self.message {
-            let style = Style::new().red();
-            stdout.write_line(&format!("\n{}", style.apply_to(message))).unwrap();
+            stdout.write_line(&format!("\n{}", message)).unwrap();
         }
+        stdout.write_line(&format!("{}{}", indent_str, gray_bg("", menu_width))).unwrap();
 
         stdout.flush().unwrap();
     }
@@ -158,6 +171,23 @@ impl Menu {
         stdout.show_cursor().unwrap();
         stdout.flush().unwrap();
     }
+}
+
+fn gray_bg(s: &str, width: usize) -> String {
+    format!("\x1b[48;5;8m{}\x1b[49m", pad_right(format!("  {}", s), width + 4)) 
+}
+
+fn pad_left(s: String, width: usize) -> String {
+    format!("{: >width$}", s, width=width)
+}
+
+fn pad_right(s: String, width: usize) -> String {
+    format!("{: <width$}", s, width=width)
+}
+
+fn clamp(num: usize, min: usize, max: usize) -> usize {
+    let out = if num < min { min } else { num };
+    if out > max { max } else { out }
 }
 
 #[cfg(test)]
