@@ -1,4 +1,4 @@
-use console::{Key, Style, Term};
+use console::{Key, Term};
 
 pub struct MenuItem {
     pub label: String,
@@ -26,6 +26,8 @@ pub struct Menu {
     page_start: usize,
     page_end: usize,
     max_width: usize,
+    bg_color: u8,
+    fg_color: u8,
 }
 
 impl Menu {
@@ -51,13 +53,21 @@ impl Menu {
             page_start: 0,
             page_end: 0,
             max_width,
+            bg_color: 8,
+            fg_color: 15,
         };
         menu.set_page(0);
         menu
     }
 
-    pub fn title(&mut self, title: &str) {
+    pub fn set_title(&mut self, title: &str) {
         self.title = Some(title.to_owned());
+    }
+    pub fn set_fg(&mut self, color: u8) {
+        self.fg_color = color;
+    }
+    pub fn set_bg(&mut self, color: u8) {
+        self.bg_color = color;
     }
 
     pub fn show(&mut self) {
@@ -100,11 +110,11 @@ impl Menu {
                         self.set_page(self.selected_page + 1);
                     }
                 }
-                Key::Escape | Key::Char('q') => {
+                Key::Escape | Key::Char('q') | Key::Backspace => {
                     self.exit(stdout);
                     break;
                 }
-                Key::Enter | Key::Del => {
+                Key::Enter => {
                     if self.exit_on_action {
                         self.exit(stdout);
                         (self.items[self.selected_item].action)();
@@ -134,7 +144,7 @@ impl Menu {
     fn draw(&self, stdout: &Term) {
         stdout.clear_screen().unwrap();
 
-        let menu_width = self.max_width + 2;
+        let menu_width = self.max_width;
 
         let indent: usize = (stdout.size().1 / 2) as usize - ((menu_width + 4) / 2);
         let indent_str = pad_left("".to_string(), indent);
@@ -142,28 +152,42 @@ impl Menu {
         let vertical_pad: usize = (stdout.size().0 / 2) as usize  - ((self.items_per_page + 5) / 2);
         stdout.write_str(&format!("{:\n<width$}", "", width=vertical_pad)).unwrap();
 
-        stdout.write_line(&format!("{}{}", indent_str, gray_bg("", menu_width))).unwrap();
+        stdout.write_str(&format!("\x1b[38;5;{}m", self.fg_color)).unwrap();
+        stdout.write_line(&format!("{}{}", indent_str, self.apply_bg("", menu_width))).unwrap();
 
+        let mut ansi_width = 18;
         if let Some(title) = &self.title {
-            stdout.write_line(&format!("{}{}", indent_str, gray_bg(title, menu_width))).unwrap();
+            let title_str = format!("\x1b[4m\x1b[1m{}\x1b[22m\x1b[24m", title);
+            stdout.write_line(&format!("{}{}", indent_str, self.apply_bg(&title_str, menu_width + ansi_width))).unwrap();
+            stdout.write_line(&format!("{}{}", indent_str, self.apply_bg("", menu_width))).unwrap();
         } 
 
         for (i, option) in self.items[self.page_start..=self.page_end].iter().enumerate() {
             let selected_item_str = if self.page_start + i == self.selected_item {
-                format!("> {}", option.label)
+                ansi_width = 9;
+                format!("\x1b[1m{}\x1b[22m", option.label)
             } else {
-                format!("  {}", option.label)
+                ansi_width = 0;
+                format!("{}", option.label)
             };
-            stdout.write_line(&format!("{}{}", indent_str, gray_bg(&selected_item_str, menu_width))).unwrap();
+            stdout.write_line(&format!("{}{}", indent_str, self.apply_bg(&selected_item_str, menu_width + ansi_width))).unwrap();
         }
-        stdout.write_line(&format!("{}{}", indent_str, gray_bg(&format!("Page {} of {}", self.selected_page + 1, self.num_pages), menu_width))).unwrap();
 
+        if self.num_pages > 1 {
+            stdout.write_line(&format!("{}{}", indent_str, self.apply_bg(&format!("Page {} of {}", self.selected_page + 1, self.num_pages), menu_width))).unwrap();
+        }
         if let Some(message) = &self.message {
             stdout.write_line(&format!("\n{}", message)).unwrap();
         }
-        stdout.write_line(&format!("{}{}", indent_str, gray_bg("", menu_width))).unwrap();
+
+        stdout.write_line(&format!("{}{}", indent_str, self.apply_bg("", menu_width))).unwrap();
+        stdout.write_str("\x1b[39m").unwrap();
 
         stdout.flush().unwrap();
+    }
+
+    fn apply_bg(&self, s: &str, width: usize) -> String {
+        format!("\x1b[48;5;{}m{}\x1b[49m", self.bg_color, pad_right(format!("  {}", s), width + 4)) 
     }
 
     fn exit(&self, stdout: &Term) {
@@ -171,10 +195,6 @@ impl Menu {
         stdout.show_cursor().unwrap();
         stdout.flush().unwrap();
     }
-}
-
-fn gray_bg(s: &str, width: usize) -> String {
-    format!("\x1b[48;5;8m{}\x1b[49m", pad_right(format!("  {}", s), width + 4)) 
 }
 
 fn pad_left(s: String, width: usize) -> String {
