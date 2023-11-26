@@ -17,6 +17,9 @@ impl MenuItem {
 pub struct Menu {
     title: Option<String>,
     items: Vec<MenuItem>,
+    bg_color: u8,
+    fg_color: u8,
+    msg_color: u8,
     message: Option<String>,
     exit_on_action: bool,
     selected_item: usize,
@@ -26,8 +29,7 @@ pub struct Menu {
     page_start: usize,
     page_end: usize,
     max_width: usize,
-    bg_color: u8,
-    fg_color: u8,
+    max_label_width: usize,
 }
 
 impl Menu {
@@ -36,14 +38,18 @@ impl Menu {
         let items_per_page = clamp(items_per_page, 1, items.len());
         let num_pages = ((items.len() - 1) / items_per_page) + 1;
 
-        let max_width = (&items).iter().fold(0, |max, item| {
+        let max_label_width = (&items).iter().fold(0, |max, item| {
             let label_len = item.label.len();
             if label_len > max { label_len } else { max }
         });
+        let max_width = max_label_width;
 
         let mut menu = Self {
             title: None,
             items,
+            bg_color: 8,
+            fg_color: 15,
+            msg_color: 7,
             message: None,
             exit_on_action,
             selected_item: 0,
@@ -53,8 +59,7 @@ impl Menu {
             page_start: 0,
             page_end: 0,
             max_width,
-            bg_color: 8,
-            fg_color: 15,
+            max_label_width,
         };
         menu.set_page(0);
         menu
@@ -63,11 +68,22 @@ impl Menu {
     pub fn set_title(&mut self, title: &str) {
         self.title = Some(title.to_owned());
     }
+    pub fn set_message(&mut self, message: &str) {
+        self.max_width = if message.len() > self.max_label_width {
+            message.len()
+        } else {
+            self.max_label_width
+        };
+        self.message = Some(message.to_owned());
+    }
     pub fn set_fg(&mut self, color: u8) {
         self.fg_color = color;
     }
     pub fn set_bg(&mut self, color: u8) {
         self.bg_color = color;
+    }
+    pub fn set_msg_color(&mut self, color: u8) {
+        self.msg_color = color;
     }
 
     pub fn show(&mut self) {
@@ -177,7 +193,8 @@ impl Menu {
             stdout.write_line(&format!("{}{}", indent_str, self.apply_bg(&format!("Page {} of {}", self.selected_page + 1, self.num_pages), menu_width))).unwrap();
         }
         if let Some(message) = &self.message {
-            stdout.write_line(&format!("\n{}", message)).unwrap();
+            stdout.write_line(&format!("{}{}", indent_str, self.apply_bg("", menu_width))).unwrap();
+            stdout.write_line(&format!("{}\x1b[38;5;{}m{}\x1b[38;5;{}m", indent_str, self.msg_color, self.apply_bg(message, menu_width), self.fg_color)).unwrap();
         }
 
         stdout.write_line(&format!("{}{}", indent_str, self.apply_bg("", menu_width))).unwrap();
@@ -208,12 +225,4 @@ fn pad_right(s: String, width: usize) -> String {
 fn clamp(num: usize, min: usize, max: usize) -> usize {
     let out = if num < min { min } else { num };
     if out > max { max } else { out }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(1, 1);
-    }
 }
