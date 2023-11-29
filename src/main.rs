@@ -1,6 +1,14 @@
 use console_menu::{Menu, MenuItem};
 
 fn main() {
+    //let menu_items = vec![
+    //    MenuItem::new("option 1", || println!("option one!")),
+    //    MenuItem::new("option 2", || println!("option two!")),
+    //    MenuItem::new("option 3", || println!("option three!")),
+    //];
+    //let mut menu = Menu::new(menu_items, true);
+    //menu.show();
+
     let inner_menu_items = vec![
         MenuItem::new("inner item 1", || println!("selected inner option 1")),
         MenuItem::new("inner item 2", || println!("selected inner option 2")),
@@ -22,6 +30,6 @@ fn main() {
     menu.set_message("a helpful tip");
     menu.set_bg(32);
     menu.set_fg(233);
-    menu.set_msg_color(235);
+    menu.set_msg_color(236);
     menu.show();
 }

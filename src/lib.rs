@@ -66,6 +66,11 @@ impl Menu {
     }
 
     pub fn set_title(&mut self, title: &str) {
+        self.max_width = if title.len() > self.max_label_width {
+            title.len()
+        } else {
+            self.max_label_width
+        };
         self.title = Some(title.to_owned());
     }
     pub fn set_message(&mut self, message: &str) {
@@ -161,11 +166,15 @@ impl Menu {
         stdout.clear_screen().unwrap();
 
         let menu_width = self.max_width;
+        let mut extra_lines = 2;
+        if let Some(_) = self.title {
+           extra_lines += 2; 
+        }
 
         let indent: usize = (stdout.size().1 / 2) as usize - ((menu_width + 4) / 2);
         let indent_str = pad_left("".to_string(), indent);
 
-        let vertical_pad: usize = (stdout.size().0 / 2) as usize  - ((self.items_per_page + 5) / 2);
+        let vertical_pad: usize = (stdout.size().0 / 2) as usize  - ((self.items_per_page + extra_lines) / 2);
         stdout.write_str(&format!("{:\n<width$}", "", width=vertical_pad)).unwrap();
 
         stdout.write_str(&format!("\x1b[38;5;{}m", self.fg_color)).unwrap();
