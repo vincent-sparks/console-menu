@@ -1,3 +1,8 @@
+//! A simple yet powerful library for creating beautiful console menus in rust.
+//!
+//! Cross platform abstraction over terminal APIs that allows for easy creation of interactive
+//! console menus.
+
 use console::{Key, Term};
 
 pub struct MenuOption {
@@ -14,13 +19,35 @@ impl MenuOption {
     }
 }
 
+pub struct MenuProps<'a> {
+    pub title: &'a str,
+    pub message: &'a str,
+    pub bg_color: u8,
+    pub fg_color: u8,
+    pub msg_color: u8,
+    pub exit_on_action: bool,
+}
+
+impl Default for MenuProps<'_> {
+    fn default() -> MenuProps<'static> {
+        MenuProps {
+            title: "",
+            message: "",
+            bg_color: 8,
+            fg_color: 15,
+            msg_color: 7,
+            exit_on_action: true,
+        }
+    }
+}
+
 pub struct Menu {
-    title: Option<String>,
     items: Vec<MenuOption>,
+    title: Option<String>,
+    message: Option<String>,
     bg_color: u8,
     fg_color: u8,
     msg_color: u8,
-    message: Option<String>,
     exit_on_action: bool,
     selected_item: usize,
     selected_page: usize,
@@ -29,29 +56,41 @@ pub struct Menu {
     page_start: usize,
     page_end: usize,
     max_width: usize,
-    max_label_width: usize,
 }
 
 impl Menu {
-    pub fn new(items: Vec<MenuOption>, exit_on_action: bool) -> Self {
+    pub fn new(items: Vec<MenuOption>, props: MenuProps) -> Self {
         let items_per_page: usize = (Term::stdout().size().0 - 6) as usize;
         let items_per_page = clamp(items_per_page, 1, items.len());
         let num_pages = ((items.len() - 1) / items_per_page) + 1;
 
-        let max_label_width = (&items).iter().fold(0, |max, item| {
+        let mut max_width = (&items).iter().fold(0, |max, item| {
             let label_len = item.label.len();
             if label_len > max { label_len } else { max }
         });
-        let max_width = max_label_width;
+        if props.title.len() > max_width {
+            max_width = props.title.len()
+        }
+        if props.message.len() > max_width {
+            max_width = props.message.len()
+        }  
 
         let mut menu = Self {
-            title: None,
             items,
-            bg_color: 8,
-            fg_color: 15,
-            msg_color: 7,
-            message: None,
-            exit_on_action,
+            title: if props.title.len() > 0 {
+                Some(props.title.to_owned())
+            } else {
+                None
+            },
+            message: if props.message.len() > 0 {
+                Some(props.message.to_owned())
+            } else {
+                None
+            },
+            bg_color: props.bg_color,
+            fg_color: props.fg_color,
+            msg_color: props.msg_color,
+            exit_on_action: props.exit_on_action,
             selected_item: 0,
             selected_page: 0,
             items_per_page,
@@ -59,36 +98,9 @@ impl Menu {
             page_start: 0,
             page_end: 0,
             max_width,
-            max_label_width,
         };
         menu.set_page(0);
         menu
-    }
-
-    pub fn set_title(&mut self, title: &str) {
-        self.max_width = if title.len() > self.max_width {
-            title.len()
-        } else {
-            self.max_width
-        };
-        self.title = Some(title.to_owned());
-    }
-    pub fn set_message(&mut self, message: &str) {
-        self.max_width = if message.len() > self.max_width {
-            message.len()
-        } else {
-            self.max_width
-        };
-        self.message = Some(message.to_owned());
-    }
-    pub fn set_fg(&mut self, color: u8) {
-        self.fg_color = color;
-    }
-    pub fn set_bg(&mut self, color: u8) {
-        self.bg_color = color;
-    }
-    pub fn set_msg_color(&mut self, color: u8) {
-        self.msg_color = color;
     }
 
     pub fn show(&mut self) {
