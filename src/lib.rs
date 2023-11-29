@@ -1,11 +1,11 @@
 use console::{Key, Term};
 
-pub struct MenuItem {
+pub struct MenuOption {
     pub label: String,
     pub action: Box<dyn FnMut()>,
 }
 
-impl MenuItem {
+impl MenuOption {
     pub fn new(label: &str, action: impl FnMut() + 'static) -> Self {
         Self {
             label: label.to_owned(),
@@ -16,7 +16,7 @@ impl MenuItem {
 
 pub struct Menu {
     title: Option<String>,
-    items: Vec<MenuItem>,
+    items: Vec<MenuOption>,
     bg_color: u8,
     fg_color: u8,
     msg_color: u8,
@@ -33,7 +33,7 @@ pub struct Menu {
 }
 
 impl Menu {
-    pub fn new(items: Vec<MenuItem>, exit_on_action: bool) -> Self {
+    pub fn new(items: Vec<MenuOption>, exit_on_action: bool) -> Self {
         let items_per_page: usize = (Term::stdout().size().0 - 6) as usize;
         let items_per_page = clamp(items_per_page, 1, items.len());
         let num_pages = ((items.len() - 1) / items_per_page) + 1;
@@ -66,18 +66,18 @@ impl Menu {
     }
 
     pub fn set_title(&mut self, title: &str) {
-        self.max_width = if title.len() > self.max_label_width {
+        self.max_width = if title.len() > self.max_width {
             title.len()
         } else {
-            self.max_label_width
+            self.max_width
         };
         self.title = Some(title.to_owned());
     }
     pub fn set_message(&mut self, message: &str) {
-        self.max_width = if message.len() > self.max_label_width {
+        self.max_width = if message.len() > self.max_width {
             message.len()
         } else {
-            self.max_label_width
+            self.max_width
         };
         self.message = Some(message.to_owned());
     }
@@ -169,6 +169,9 @@ impl Menu {
         let mut extra_lines = 2;
         if let Some(_) = self.title {
            extra_lines += 2; 
+        }
+        if let Some(_) = self.message {
+            extra_lines += 1;
         }
 
         let indent: usize = (stdout.size().1 / 2) as usize - ((menu_width + 4) / 2);
