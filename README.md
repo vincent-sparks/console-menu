@@ -8,7 +8,7 @@ A simple yet powerful library for creating beautiful console menus in rust.
 To get started, create a Menu object and pass it a list of MenuOptions. A simple example:
 
 ```rust
-use pretty_menu::{Menu, MenuOption, MenuProps};
+use console_menu::{Menu, MenuOption, MenuProps};
 
 let menu_options = vec![
     MenuOption::new("option 1", || println!("option one!")),
@@ -41,4 +41,4 @@ menu.show();
 ```
 <img width="894" alt="Screen Shot 2023-11-29 at 12 56 45 PM" src="https://github.com/Bdeering1/console-menu/assets/55864293/f7e65fa2-4f9b-419f-b812-fa9ca32e46bd">
 
-Menus can be nested, and options can include any type of callback. Please refer to the [docs](https://docs.rs/pretty-menu/0.1.1/console_menu/) for more information.
+Menus can be nested, and options can include any type of callback. Please refer to the [docs](https://docs.rs/console-menu/0.1.1/console_menu/) for more information.
