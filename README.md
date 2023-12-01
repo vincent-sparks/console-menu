@@ -41,4 +41,4 @@ menu.show();
 ```
 <img width="894" alt="Screen Shot 2023-11-29 at 12 56 45 PM" src="https://github.com/Bdeering1/console-menu/assets/55864293/f7e65fa2-4f9b-419f-b812-fa9ca32e46bd">
 
-Menus can also be nested, and their properties can be set dynamically. Please refer to the examples page for more complex use cases.
+Menus can be nested, and options can include any type of callback. Please refer to the [docs](https://docs.rs/pretty-menu/0.1.0/pretty_menu/) for more information.
