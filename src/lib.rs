@@ -1,9 +1,78 @@
 //! A simple yet powerful library for creating beautiful console menus in rust.
 //!
-//! Cross platform abstraction over terminal APIs that allows for easy creation of interactive
-//! console menus.
+//! Allows for easy creation of interactive console menus. A simple example:
+//!
+//! ```rust
+//! use pretty_menu::{Menu, MenuOption, MenuProps};
+//! 
+//! let menu_options = vec![
+//!     MenuOption::new("option 1", || println!("option one!")),
+//!     MenuOption::new("option 2", || println!("option two!")),
+//!     MenuOption::new("option 3", || println!("option three!")),
+//! ];
+//! let mut menu = Menu::new(menu_options, MenuProps::default());
+//! menu.show();
+//! ```
 
 use console::{Key, Term};
+
+/// Stores configuration data passed to a `Menu` on creation.
+///
+/// Menus use [8-bit](https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit) colors to ensure
+/// widespread terminal support. It should be noted that values from 0-15 will make colors vary
+/// based on individual terminal settings.
+///
+/// Configure a subset of properties using the defaults and struct update syntax:
+/// ```rust
+/// let props = MenuProps {
+///     title: "My Menu",
+///     ..MenuProps::default()
+/// }
+/// ```
+pub struct MenuProps<'a> {
+    /// Displays above the list of menu options. Pass an empty string for no title.
+    pub title: &'a str,
+    /// Display below the list of menu options. Pass an empty string for no message.
+    pub message: &'a str,
+    pub bg_color: u8,
+    pub fg_color: u8,
+    pub msg_color: u8,
+    /// If true, menu will exit immediately upon an option being selected.
+    pub exit_on_action: bool,
+}
+
+/// ```rust
+/// MenuProps {
+///     title: "",
+///     message: "",
+///     bg_color: 8,
+///     fg_color: 15,
+///     msg_color: 7,
+///     exit_on_action: true,
+/// }
+/// ```
+impl Default for MenuProps<'_> {
+    fn default() -> MenuProps<'static> {
+        MenuProps {
+            title: "",
+            message: "",
+            bg_color: 8,
+            fg_color: 15,
+            msg_color: 7,
+            exit_on_action: true,
+        }
+    }
+}
+
+/// An element in a `Menu`.
+///
+/// Consists of a label and a callback. Callbacks can be any function, including functions that
+/// call nested menus:
+///
+/// ```rust
+/// let mut nested_menu = Menu::new(vec![], MenuProps::default());
+/// let show_nested = MenuOption::new("show nested menu", move || nested_menu.show());
+/// ```
 
 pub struct MenuOption {
     pub label: String,
@@ -19,28 +88,28 @@ impl MenuOption {
     }
 }
 
-pub struct MenuProps<'a> {
-    pub title: &'a str,
-    pub message: &'a str,
-    pub bg_color: u8,
-    pub fg_color: u8,
-    pub msg_color: u8,
-    pub exit_on_action: bool,
-}
-
-impl Default for MenuProps<'_> {
-    fn default() -> MenuProps<'static> {
-        MenuProps {
-            title: "",
-            message: "",
-            bg_color: 8,
-            fg_color: 15,
-            msg_color: 7,
-            exit_on_action: true,
-        }
+/// ```rust
+/// MenuOption::new("exit", || {})
+/// ```
+impl Default for MenuOption {
+    fn default() -> MenuOption {
+        MenuOption::new("exit", || {})
     }
 }
 
+/// Interactive console menu.
+///
+/// Create a menu by passing it a list of `MenuOption` and a `MenuProps`. Display using`.show()`.
+///
+/// ```rust
+/// let menu_options = vec![
+///     MenuOption::new("option 1", || println!("option one!")),
+///     MenuOption::new("option 2", || println!("option two!")),
+///     MenuOption::new("option 3", || println!("option three!")),
+/// ];
+/// let mut menu = Menu::new(menu_options, MenuProps::default());
+/// menu.show();
+/// ```
 pub struct Menu {
     items: Vec<MenuOption>,
     title: Option<String>,
@@ -60,6 +129,9 @@ pub struct Menu {
 
 impl Menu {
     pub fn new(items: Vec<MenuOption>, props: MenuProps) -> Self {
+        let mut items = items;
+        if items.len() == 0 { items.push(MenuOption::default()) }
+
         let items_per_page: usize = (Term::stdout().size().0 - 6) as usize;
         let items_per_page = clamp(items_per_page, 1, items.len());
         let num_pages = ((items.len() - 1) / items_per_page) + 1;
