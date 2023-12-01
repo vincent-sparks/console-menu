@@ -3,7 +3,7 @@
 //! Allows for easy creation of interactive console menus. A simple example:
 //!
 //! ```rust
-//! use pretty_menu::{Menu, MenuOption, MenuProps};
+//! use console_menu::{Menu, MenuOption, MenuProps};
 //! 
 //! let menu_options = vec![
 //!     MenuOption::new("option 1", || println!("option one!")),
