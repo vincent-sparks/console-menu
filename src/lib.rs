@@ -13,6 +13,17 @@
 //! let mut menu = Menu::new(menu_options, MenuProps::default());
 //! menu.show();
 //! ```
+//!
+//! Menus can include a title, subtext, and any combination of [8-bit](https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit)
+//! colored backgrounds and text by configuring `MenuProps`. Menus that don't fit the console window are paginated.
+//!
+//! Menu controls are as follows:
+//! 
+//! | Key Bind | Action      |
+//! | -------- | ----------- |
+//! | ↓, ↑, ←, →, h, j, k, l | make selection        |
+//! | enter    | confirm     |
+//! | esc, q   | exit        |
 
 use console::{Key, Term};
 
