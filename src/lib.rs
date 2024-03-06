@@ -14,7 +14,7 @@
 //! menu.show();
 //! ```
 //!
-//! Menus can include a title, subtext, and any combination of [8-bit](https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit)
+//! Menus can include a title, footer message, and any combination of [8-bit](https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit)
 //! colored backgrounds and text by configuring `MenuProps`. Menus that don't fit the console window are paginated.
 //!
 //! Menu controls are as follows:
