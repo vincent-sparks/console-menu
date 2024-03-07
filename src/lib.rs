@@ -2,7 +2,7 @@
 //!
 //! Allows for easy creation of interactive console menus. A simple example:
 //!
-//! ```rust
+//! ```no_run
 //! use console_menu::{Menu, MenuOption, MenuProps};
 //! 
 //! let menu_options = vec![
@@ -34,11 +34,13 @@ use console::{Key, Term};
 /// based on individual terminal settings.
 ///
 /// Configure a subset of properties using the defaults and struct update syntax:
-/// ```rust
+/// ```
+/// # use console_menu::MenuProps;
+///
 /// let props = MenuProps {
 ///     title: "My Menu",
 ///     ..MenuProps::default()
-/// }
+/// };
 /// ```
 pub struct MenuProps<'a> {
     /// Displays above the list of menu options. Pass an empty string for no title.
@@ -52,7 +54,7 @@ pub struct MenuProps<'a> {
     pub exit_on_action: bool,
 }
 
-/// ```rust
+/// ```ignore
 /// MenuProps {
 ///     title: "",
 ///     message: "",
@@ -80,7 +82,9 @@ impl Default for MenuProps<'_> {
 /// Consists of a label and a callback. Callbacks can be any function, including functions that
 /// call nested menus:
 ///
-/// ```rust
+/// ```
+/// # use console_menu::{Menu, MenuOption, MenuProps};
+///
 /// let mut nested_menu = Menu::new(vec![], MenuProps::default());
 /// let show_nested = MenuOption::new("show nested menu", move || nested_menu.show());
 /// ```
@@ -99,7 +103,7 @@ impl MenuOption {
     }
 }
 
-/// ```rust
+/// ```ignore
 /// MenuOption::new("exit", || {})
 /// ```
 impl Default for MenuOption {
@@ -112,7 +116,9 @@ impl Default for MenuOption {
 ///
 /// Create a menu by passing it a list of `MenuOption` and a `MenuProps`. Display using`.show()`.
 ///
-/// ```rust
+/// ```no_run
+/// # use console_menu::{Menu, MenuOption, MenuProps};
+///
 /// let menu_options = vec![
 ///     MenuOption::new("option 1", || println!("option one!")),
 ///     MenuOption::new("option 2", || println!("option two!")),
