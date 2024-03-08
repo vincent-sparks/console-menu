@@ -6,6 +6,8 @@ edition = "2021"
 license = "MIT"
 authors = ["Bryn Deering"]
 readme = "README.md"
+homepage = "https://github.com/Bdeering1/console-menu#readme"
+repository = "https://github.com/Bdeering1/console-menu"
 keywords = ["menu", "tui", "terminal", "cli"]
 categories = ["command-line-utilities"]
 
