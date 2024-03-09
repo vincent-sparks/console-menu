@@ -46,22 +46,30 @@ pub struct MenuProps<'a> {
     pub title: &'a str,
     /// Display below the list of menu options. Pass an empty string for no message.
     pub message: &'a str,
-    pub bg_color: u8,
-    pub fg_color: u8,
-    pub msg_color: u8,
-    pub selected_color: Option<u8>,
     /// If true, menu will exit immediately upon an option being selected.
     pub exit_on_action: bool,
+    /// The background color for the menu.
+    pub bg_color: u8,
+    /// The foreground (text) color for the menu.
+    pub fg_color: u8,
+    /// Optional color for the title. If None, the foreground color will be used.
+    pub title_color: Option<u8>,
+    /// Optional color for the selected menu option. If None, the foreground color will be used.
+    pub selected_color: Option<u8>,
+    /// Optional color for the footer message. If None, the foreground color will be used.
+    pub msg_color: Option<u8>,
 }
 
 /// ```ignore
 /// MenuProps {
 ///     title: "",
 ///     message: "",
+///     exit_on_action: true,
 ///     bg_color: 8,
 ///     fg_color: 15,
-///     msg_color: 7,
-///     exit_on_action: true,
+///     title_color: None,
+///     selected_color: None,
+///     msg_color: Some(7),
 /// }
 /// ```
 impl Default for MenuProps<'_> {
@@ -69,11 +77,12 @@ impl Default for MenuProps<'_> {
         MenuProps {
             title: "",
             message: "",
+            exit_on_action: true,
             bg_color: 8,
             fg_color: 15,
-            msg_color: 7,
+            title_color: None,
             selected_color: None,
-            exit_on_action: true,
+            msg_color: Some(7),
         }
     }
 }
@@ -130,11 +139,12 @@ pub struct Menu {
     items: Vec<MenuOption>,
     title: Option<String>,
     message: Option<String>,
+    exit_on_action: bool,
     bg_color: u8,
     fg_color: u8,
-    msg_color: u8,
+    title_color: u8,
     selected_color: u8,
-    exit_on_action: bool,
+    msg_color: u8,
     selected_item: usize,
     selected_page: usize,
     items_per_page: usize,
@@ -176,11 +186,12 @@ impl Menu {
             } else {
                 None
             },
+            exit_on_action: props.exit_on_action,
             bg_color: props.bg_color,
             fg_color: props.fg_color,
-            msg_color: props.msg_color,
+            title_color: props.title_color.unwrap_or(props.fg_color),
             selected_color: props.selected_color.unwrap_or(props.fg_color),
-            exit_on_action: props.exit_on_action,
+            msg_color: props.msg_color.unwrap_or(props.fg_color),
             selected_item: 0,
             selected_page: 0,
             items_per_page,
@@ -285,16 +296,16 @@ impl Menu {
         stdout.write_str(&format!("\x1b[38;5;{}m", self.fg_color)).unwrap(); // set foreground color
         stdout.write_line(&format!("{}{}", indent_str, self.apply_bg("", menu_width))).unwrap();
 
-        let mut ansi_width = 18;
+        let mut ansi_width = 34 + num_digs(self.fg_color) + num_digs(self.title_color);
         if let Some(title) = &self.title {
             let title_str = format!("\x1b[4m{}\x1b[24m", self.apply_bold(title)); // apply bold + underline
-            stdout.write_line(&format!("{}{}", indent_str, self.apply_bg(&title_str, menu_width + ansi_width))).unwrap();
+            stdout.write_line(&format!("{}{}", indent_str, self.apply_bg(&self.switch_fg(&title_str, self.title_color), menu_width + ansi_width))).unwrap();
             stdout.write_line(&format!("{}{}", indent_str, self.apply_bg("", menu_width))).unwrap();
         } 
 
         for (i, option) in self.items[self.page_start..=self.page_end].iter().enumerate() {
             let item_str = if self.page_start + i == self.selected_item {
-                ansi_width = 9 + 16 + num_digs(self.fg_color) + num_digs(self.selected_color);
+                ansi_width = 25 + num_digs(self.fg_color) + num_digs(self.selected_color);
                 format!("{}", self.switch_fg(&self.apply_bold(&option.label), self.selected_color))
             } else {
                 ansi_width = 0;
@@ -317,16 +328,17 @@ impl Menu {
         stdout.flush().unwrap();
     }
 
+
+    fn apply_bold(&self, s: &str) -> String { // 9 ansi chars
+        format!("\x1b[1m{}\x1b[22m", s)
+    }
+
     fn switch_fg(&self, s: &str, color: u8) -> String { // 16 + (fg digs + switch digs) ansi chars
         format!("\x1b[38;5;{}m{}\x1b[38;5;{}m", color, s, self.fg_color)
     }
 
     fn apply_bg(&self, s: &str, width: usize) -> String {
         format!("\x1b[48;5;{}m{}\x1b[49m", self.bg_color, pad_right(format!("  {}", s), width + 4)) 
-    }
-
-    fn apply_bold(&self, s: &str) -> String { // 9 ansi chars
-        format!("\x1b[1m{}\x1b[22m", s)
     }
 
     fn exit(&self, stdout: &Term) {
