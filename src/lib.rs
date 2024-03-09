@@ -36,7 +36,6 @@ use console::{Key, Term};
 /// Configure a subset of properties using the defaults and struct update syntax:
 /// ```
 /// # use console_menu::MenuProps;
-///
 /// let props = MenuProps {
 ///     title: "My Menu",
 ///     ..MenuProps::default()
@@ -50,6 +49,7 @@ pub struct MenuProps<'a> {
     pub bg_color: u8,
     pub fg_color: u8,
     pub msg_color: u8,
+    pub selected_color: Option<u8>,
     /// If true, menu will exit immediately upon an option being selected.
     pub exit_on_action: bool,
 }
@@ -72,6 +72,7 @@ impl Default for MenuProps<'_> {
             bg_color: 8,
             fg_color: 15,
             msg_color: 7,
+            selected_color: None,
             exit_on_action: true,
         }
     }
@@ -84,7 +85,6 @@ impl Default for MenuProps<'_> {
 ///
 /// ```
 /// # use console_menu::{Menu, MenuOption, MenuProps};
-///
 /// let mut nested_menu = Menu::new(vec![], MenuProps::default());
 /// let show_nested = MenuOption::new("show nested menu", move || nested_menu.show());
 /// ```
@@ -118,7 +118,6 @@ impl Default for MenuOption {
 ///
 /// ```no_run
 /// # use console_menu::{Menu, MenuOption, MenuProps};
-///
 /// let menu_options = vec![
 ///     MenuOption::new("option 1", || println!("option one!")),
 ///     MenuOption::new("option 2", || println!("option two!")),
@@ -134,6 +133,7 @@ pub struct Menu {
     bg_color: u8,
     fg_color: u8,
     msg_color: u8,
+    selected_color: u8,
     exit_on_action: bool,
     selected_item: usize,
     selected_page: usize,
@@ -179,6 +179,7 @@ impl Menu {
             bg_color: props.bg_color,
             fg_color: props.fg_color,
             msg_color: props.msg_color,
+            selected_color: props.selected_color.unwrap_or(props.fg_color),
             exit_on_action: props.exit_on_action,
             selected_item: 0,
             selected_page: 0,
@@ -281,25 +282,25 @@ impl Menu {
         let vertical_pad: usize = (stdout.size().0 / 2) as usize  - ((self.items_per_page + extra_lines) / 2);
         stdout.write_str(&format!("{:\n<width$}", "", width=vertical_pad)).unwrap();
 
-        stdout.write_str(&format!("\x1b[38;5;{}m", self.fg_color)).unwrap();
+        stdout.write_str(&format!("\x1b[38;5;{}m", self.fg_color)).unwrap(); // set foreground color
         stdout.write_line(&format!("{}{}", indent_str, self.apply_bg("", menu_width))).unwrap();
 
         let mut ansi_width = 18;
         if let Some(title) = &self.title {
-            let title_str = format!("\x1b[4m\x1b[1m{}\x1b[22m\x1b[24m", title);
+            let title_str = format!("\x1b[4m{}\x1b[24m", self.apply_bold(title)); // apply bold + underline
             stdout.write_line(&format!("{}{}", indent_str, self.apply_bg(&title_str, menu_width + ansi_width))).unwrap();
             stdout.write_line(&format!("{}{}", indent_str, self.apply_bg("", menu_width))).unwrap();
         } 
 
         for (i, option) in self.items[self.page_start..=self.page_end].iter().enumerate() {
-            let selected_item_str = if self.page_start + i == self.selected_item {
-                ansi_width = 9;
-                format!("\x1b[1m{}\x1b[22m", option.label)
+            let item_str = if self.page_start + i == self.selected_item {
+                ansi_width = 9 + 16 + num_digs(self.fg_color) + num_digs(self.selected_color);
+                format!("{}", self.switch_fg(&self.apply_bold(&option.label), self.selected_color))
             } else {
                 ansi_width = 0;
                 format!("{}", option.label)
             };
-            stdout.write_line(&format!("{}{}", indent_str, self.apply_bg(&selected_item_str, menu_width + ansi_width))).unwrap();
+            stdout.write_line(&format!("{}{}", indent_str, self.apply_bg(&item_str, menu_width + ansi_width))).unwrap();
         }
 
         if self.num_pages > 1 {
@@ -307,17 +308,25 @@ impl Menu {
         }
         if let Some(message) = &self.message {
             stdout.write_line(&format!("{}{}", indent_str, self.apply_bg("", menu_width))).unwrap();
-            stdout.write_line(&format!("{}\x1b[38;5;{}m{}\x1b[38;5;{}m", indent_str, self.msg_color, self.apply_bg(message, menu_width), self.fg_color)).unwrap();
+            stdout.write_line(&format!("{}{}", indent_str, self.switch_fg(&self.apply_bg(message, menu_width), self.msg_color))).unwrap();
         }
 
         stdout.write_line(&format!("{}{}", indent_str, self.apply_bg("", menu_width))).unwrap();
-        stdout.write_str("\x1b[39m").unwrap();
+        stdout.write_str("\x1b[39m").unwrap(); // reset foreground color
 
         stdout.flush().unwrap();
     }
 
+    fn switch_fg(&self, s: &str, color: u8) -> String { // 16 + (fg digs + switch digs) ansi chars
+        format!("\x1b[38;5;{}m{}\x1b[38;5;{}m", color, s, self.fg_color)
+    }
+
     fn apply_bg(&self, s: &str, width: usize) -> String {
         format!("\x1b[48;5;{}m{}\x1b[49m", self.bg_color, pad_right(format!("  {}", s), width + 4)) 
+    }
+
+    fn apply_bold(&self, s: &str) -> String { // 9 ansi chars
+        format!("\x1b[1m{}\x1b[22m", s)
     }
 
     fn exit(&self, stdout: &Term) {
@@ -338,4 +347,8 @@ fn pad_right(s: String, width: usize) -> String {
 fn clamp(num: usize, min: usize, max: usize) -> usize {
     let out = if num < min { min } else { num };
     if out > max { max } else { out }
+}
+
+fn num_digs(num: u8) -> usize {
+    (num.checked_ilog10().unwrap_or(0) + 1) as usize
 }

@@ -20,7 +20,7 @@ menu.show();
 ```
 <img width="893" alt="Screen Shot 2023-11-26 at 6 09 02 PM" src="https://github.com/Bdeering1/console-menu/assets/55864293/aab7d039-a83a-40e0-9c78-93817df0b819">
 
-Menus are controlled using the arrow keys to move around, enter to select an option, and escape to exit. Vim type keybindings are also supported. Menus can include a title, footer message, and any combination of [8-bit](https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit) colored backgrounds and text.
+Menus are controlled using the arrow keys to move around, enter to select an option, and escape to exit. Vim style keybindings are also supported. Menus can include a title, footer message, and any combination of [8-bit](https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit) colored backgrounds and text.
 
 ```rust
 let menu_options = vec![
