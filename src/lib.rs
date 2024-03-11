@@ -60,7 +60,9 @@ pub struct MenuProps<'a> {
     pub msg_color: Option<u8>,
 }
 
-/// ```ignore
+/// ```
+/// # use console_menu::MenuProps;
+/// # fn default() -> MenuProps<'static> {
 /// MenuProps {
 ///     title: "",
 ///     message: "",
@@ -71,6 +73,7 @@ pub struct MenuProps<'a> {
 ///     selected_color: None,
 ///     msg_color: Some(7),
 /// }
+/// # }
 /// ```
 impl Default for MenuProps<'_> {
     fn default() -> MenuProps<'static> {
@@ -112,8 +115,11 @@ impl MenuOption {
     }
 }
 
-/// ```ignore
+/// ```
+/// # use console_menu::MenuOption;
+/// # fn default() -> MenuOption {
 /// MenuOption::new("exit", || {})
+/// # }
 /// ```
 impl Default for MenuOption {
     fn default() -> MenuOption {
