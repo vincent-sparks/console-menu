@@ -34,7 +34,7 @@ let mut menu = Menu::new(menu_options, MenuProps {
     message: "*coffee is free!",
     fg_color: 233,
     bg_color: 32,
-    msg_color: 236,
+    msg_color: Some(236),
     ..MenuProps::default()
 });
 menu.show();
