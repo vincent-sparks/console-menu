@@ -212,9 +212,10 @@ impl Menu {
 
     pub fn show(&mut self) {
         let stdout = Term::buffered_stdout();
-
         stdout.hide_cursor().unwrap();
-        stdout.clear_screen().unwrap();
+
+        let term_height = Term::stdout().size().0 as usize;
+        stdout.write_str(&"\n".repeat(term_height - 1)).unwrap();
 
         self.draw(&stdout);
         self.run_navigation(&stdout);
@@ -282,7 +283,7 @@ impl Menu {
     }
 
     fn draw(&self, stdout: &Term) {
-        stdout.clear_screen().unwrap();
+        clear_screen(stdout);
 
         let menu_width = self.max_width;
         let mut extra_lines = 2;
@@ -347,11 +348,17 @@ impl Menu {
         format!("\x1b[48;5;{}m{}\x1b[49m", self.bg_color, pad_right(format!("  {}", s), width + 4)) 
     }
 
+
     fn exit(&self, stdout: &Term) {
-        stdout.clear_screen().unwrap();
+        clear_screen(stdout);
         stdout.show_cursor().unwrap();
         stdout.flush().unwrap();
     }
+}
+
+
+fn clear_screen(stdout: &Term) {
+    stdout.write_str("\x1b[H\x1b[J\x1b[H").unwrap();
 }
 
 fn pad_left(s: String, width: usize) -> String {
