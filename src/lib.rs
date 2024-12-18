@@ -27,6 +27,19 @@
 
 use console::{Key, Term};
 
+pub mod color {
+    pub const LIGHT_GRAY: u8 = 7;
+    pub const GRAY: u8 = 8;
+    pub const BLUE: u8 = 32;
+    pub const GREEN: u8 = 35;
+    pub const PURPLE: u8 = 99;
+    pub const RED: u8 = 160;
+    pub const ORANGE: u8 = 166;
+    pub const YELLOW: u8 = 220;
+    pub const BLACK: u8 = 233;
+    pub const DARK_GRAY:u8 = 236;
+}
+
 /// Stores configuration data passed to a `Menu` on creation.
 ///
 /// Menus use [8-bit](https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit) colors to ensure
