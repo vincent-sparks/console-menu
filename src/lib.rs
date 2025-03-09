@@ -61,8 +61,6 @@ pub struct MenuProps<'a> {
     pub title: &'a str,
     /// Display below the list of menu options. Pass an empty string for no message.
     pub message: &'a str,
-    /// If true, menu will exit immediately upon an option being selected.
-    pub exit_on_action: bool,
     /// The background color for the menu.
     pub bg_color: u8,
     /// The foreground (text) color for the menu.
@@ -81,7 +79,6 @@ pub struct MenuProps<'a> {
 /// MenuProps {
 ///     title: "",
 ///     message: "",
-///     exit_on_action: true,
 ///     bg_color: 8,
 ///     fg_color: 15,
 ///     title_color: None,
@@ -95,7 +92,6 @@ impl Default for MenuProps<'_> {
         MenuProps {
             title: "",
             message: "",
-            exit_on_action: true,
             bg_color: 8,
             fg_color: 15,
             title_color: None,
@@ -115,17 +111,16 @@ impl Default for MenuProps<'_> {
 /// let mut nested_menu = Menu::new(vec![], MenuProps::default());
 /// let show_nested = MenuOption::new("show nested menu", move || nested_menu.show());
 /// ```
-
-pub struct MenuOption {
+pub struct MenuOption<T> {
     pub label: String,
-    pub action: Box<dyn FnMut()>,
+    pub value: T,
 }
 
-impl MenuOption {
-    pub fn new(label: &str, action: impl FnMut() + 'static) -> Self {
+impl<T> MenuOption<T> {
+    pub fn new(label: &str, value: T) -> Self {
         Self {
             label: label.to_owned(),
-            action: Box::new(action),
+            value,
         }
     }
 }
@@ -136,9 +131,9 @@ impl MenuOption {
 /// MenuOption::new("exit", || {})
 /// # }
 /// ```
-impl Default for MenuOption {
-    fn default() -> MenuOption {
-        MenuOption::new("exit", || {})
+impl<T: Default> Default for MenuOption<T> {
+    fn default() -> MenuOption<T> {
+        MenuOption::new("exit", Default::default())
     }
 }
 
@@ -156,11 +151,10 @@ impl Default for MenuOption {
 /// let mut menu = Menu::new(menu_options, MenuProps::default());
 /// menu.show();
 /// ```
-pub struct Menu {
-    items: Vec<MenuOption>,
+pub struct Menu<T> {
+    items: Vec<MenuOption<T>>,
     title: Option<String>,
     message: Option<String>,
-    exit_on_action: bool,
     bg_color: u8,
     fg_color: u8,
     title_color: u8,
@@ -175,16 +169,15 @@ pub struct Menu {
     max_width: usize,
 }
 
-impl Menu {
-    pub fn new(items: Vec<MenuOption>, props: MenuProps) -> Self {
-        let mut items = items;
-        if items.len() == 0 { items.push(MenuOption::default()) }
+impl<T: Default> Menu<T> {
+    pub fn new(items: Vec<MenuOption<T>>, props: MenuProps) -> Self {
+        assert!(!items.is_empty());
 
         let items_per_page: usize = (Term::stdout().size().0 - 6) as usize;
         let items_per_page = clamp(items_per_page, 1, items.len());
         let num_pages = ((items.len() - 1) / items_per_page) + 1;
 
-        let mut max_width = (&items).iter().fold(0, |max, item| {
+        let mut max_width = items.iter().fold(0, |max, item| {
             let label_len = item.label.len();
             if label_len > max { label_len } else { max }
         });
@@ -197,17 +190,16 @@ impl Menu {
 
         let mut menu = Self {
             items,
-            title: if props.title.len() > 0 {
+            title: if !props.title.is_empty() {
                 Some(props.title.to_owned())
             } else {
                 None
             },
-            message: if props.message.len() > 0 {
+            message: if !props.message.is_empty() {
                 Some(props.message.to_owned())
             } else {
                 None
             },
-            exit_on_action: props.exit_on_action,
             bg_color: props.bg_color,
             fg_color: props.fg_color,
             title_color: props.title_color.unwrap_or(props.fg_color),
@@ -225,7 +217,7 @@ impl Menu {
         menu
     }
 
-    pub fn show(&mut self) {
+    pub fn show(&mut self) -> Option<&T> {
         let stdout = Term::buffered_stdout();
         stdout.hide_cursor().unwrap();
 
@@ -233,10 +225,10 @@ impl Menu {
         stdout.write_str(&"\n".repeat(term_height - 1)).unwrap();
 
         self.draw(&stdout);
-        self.run_navigation(&stdout);
+        self.run_navigation(&stdout)
     }
 
-    fn run_navigation(&mut self, stdout: &Term) {
+    fn run_navigation(&mut self, stdout: &Term) -> Option<&T> {
         loop {
             let key = stdout.read_key().unwrap();
 
@@ -268,16 +260,10 @@ impl Menu {
                 }
                 Key::Escape | Key::Char('q') | Key::Backspace => {
                     self.exit(stdout);
-                    break;
+                    return None;
                 }
                 Key::Enter => {
-                    if self.exit_on_action {
-                        self.exit(stdout);
-                        (self.items[self.selected_item].action)();
-                        break;
-                    } else {
-                        (self.items[self.selected_item].action)();
-                    }    
+                    return Some(&self.items[self.selected_item].value);
                 }
                 _ => {}
             }
@@ -302,10 +288,10 @@ impl Menu {
 
         let menu_width = self.max_width;
         let mut extra_lines = 2;
-        if let Some(_) = self.title {
+        if self.title.is_some() {
            extra_lines += 2; 
         }
-        if let Some(_) = self.message {
+        if self.message.is_some() {
             extra_lines += 1;
         }
 
@@ -328,10 +314,10 @@ impl Menu {
         for (i, option) in self.items[self.page_start..=self.page_end].iter().enumerate() {
             let item_str = if self.page_start + i == self.selected_item {
                 ansi_width = 25 + num_digs(self.fg_color) + num_digs(self.selected_color);
-                format!("{}", self.switch_fg(&self.apply_bold(&option.label), self.selected_color))
+                self.switch_fg(&self.apply_bold(&option.label), self.selected_color).to_string()
             } else {
                 ansi_width = 0;
-                format!("{}", option.label)
+                option.label.to_string()
             };
             stdout.write_line(&format!("{}{}", indent_str, self.apply_bg(&item_str, menu_width + ansi_width))).unwrap();
         }
