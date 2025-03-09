@@ -169,7 +169,7 @@ pub struct Menu<T> {
     max_width: usize,
 }
 
-impl<T: Default> Menu<T> {
+impl<T> Menu<T> {
     pub fn new(items: Vec<MenuOption<T>>, props: MenuProps) -> Self {
         assert!(!items.is_empty());
 
