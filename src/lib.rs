@@ -263,6 +263,7 @@ impl<T> Menu<T> {
                     return None;
                 }
                 Key::Enter => {
+                    self.exit(stdout);
                     return Some(&self.items[self.selected_item].value);
                 }
                 _ => {}
